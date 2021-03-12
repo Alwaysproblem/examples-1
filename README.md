@@ -23,23 +23,23 @@ Unless otherwise specified by a LICENSE file in a subdirectory, the LICENSE refe
 
 ### Notable examples
 
-| Example | Link |
-| ------- | ---- |
-| BERT (PopART) | [code](applications/popart/bert) |
-| BERT (TensorFlow) | [code](applications/tensorflow/bert) |
-| DeepVoice3 (PopART) | [code](applications/popart/deep_voice) |
-| CNN Training including ResNet, ResNeXt & EfficientNet (TensorFlow) | [code](applications/tensorflow/cnns/training) |
-| CNN Inference including ResNet, MobileNet & EfficientNet (TensorFlow) | [code](applications/tensorflow/cnns/inference) |
-| CNN Training & Inference including ResNet, ResNeXt & EfficientNet (PyTorch) | [code](applications/pytorch/cnns) |
-| ResNet Training (PopART) | [code](applications/popart/resnet) |
-| ResNext Inference (PopART) | [code](applications/popart/resnext_inference) |
-| Recommendation using Autoencoders (TensorFlow) | [code](applications/tensorflow/autoencoder) |
-| Sales forecasting example (TensorFlow) | [code](applications/tensorflow/sales_forecasting) |
-| Contrastive Divergence VAE using MCMC methods (TensorFlow) | [code](applications/tensorflow/contrastive_divergence_vae) |
-| Example reinforcement learning policy model (TensorFlow)| [code](applications/tensorflow/reinforcement_learning) |
-| Click through rate: Deep Interest Network (TensorFlow) | [code](applications/tensorflow/click_through_rate) |
-| Dynamic Sparsity: MNIST RigL (TensorFlow) | [code](applications/tensorflow/dynamic_sparsity/mnist_rigl) |
-| Dynamic Sparsity: Autoregressive Language Modelling (TensorFlow) | [code](applications/tensorflow/dynamic_sparsity/language_modelling) |
+| Example                                                                     | Link                                                                |
+| --------------------------------------------------------------------------- | ------------------------------------------------------------------- |
+| BERT (PopART)                                                               | [code](applications/popart/bert)                                    |
+| BERT (TensorFlow)                                                           | [code](applications/tensorflow/bert)                                |
+| DeepVoice3 (PopART)                                                         | [code](applications/popart/deep_voice)                              |
+| CNN Training including ResNet, ResNeXt & EfficientNet (TensorFlow)          | [code](applications/tensorflow/cnns/training)                       |
+| CNN Inference including ResNet, MobileNet & EfficientNet (TensorFlow)       | [code](applications/tensorflow/cnns/inference)                      |
+| CNN Training & Inference including ResNet, ResNeXt & EfficientNet (PyTorch) | [code](applications/pytorch/cnns)                                   |
+| ResNet Training (PopART)                                                    | [code](applications/popart/resnet)                                  |
+| ResNext Inference (PopART)                                                  | [code](applications/popart/resnext_inference)                       |
+| Recommendation using Autoencoders (TensorFlow)                              | [code](applications/tensorflow/autoencoder)                         |
+| Sales forecasting example (TensorFlow)                                      | [code](applications/tensorflow/sales_forecasting)                   |
+| Contrastive Divergence VAE using MCMC methods (TensorFlow)                  | [code](applications/tensorflow/contrastive_divergence_vae)          |
+| Example reinforcement learning policy model (TensorFlow)                    | [code](applications/tensorflow/reinforcement_learning)              |
+| Click through rate: Deep Interest Network (TensorFlow)                      | [code](applications/tensorflow/click_through_rate)                  |
+| Dynamic Sparsity: MNIST RigL (TensorFlow)                                   | [code](applications/tensorflow/dynamic_sparsity/mnist_rigl)         |
+| Dynamic Sparsity: Autoregressive Language Modelling (TensorFlow)            | [code](applications/tensorflow/dynamic_sparsity/language_modelling) |
 
 ### Application examples
 

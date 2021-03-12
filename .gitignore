@@ -33,3 +33,5 @@ report.txt
 
 # Virtual environments
 *virtualenv/
+
+tf1-ipu/
