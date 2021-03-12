@@ -144,7 +144,7 @@ Weights and Biases is a tool that helps you tracking different metrics of your m
 `requirements.txt` will install a version of wandb.
 You can login to wandb as you prefer and then simply activate it using the flag --wandb
 ```shell
-python3 run_pretraining.py --config configs/pretrain_tiny_128_lamb.json --train-file ./Dataset/sample.tfrecord --wandb
+python3 run_pretraining.py --config configs/pretrain_tiny_128_lamb.json --train-file ./Datasets/sample.tfrecord --wandb
 ```
 
 Just before that the run starts you will see a link to your run appearing in your terminal.
