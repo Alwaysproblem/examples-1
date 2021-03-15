@@ -188,24 +188,22 @@ def basic_pipelined_training_step(infeed,
 
     if is_training:
         pipeline_ops = ipu.ops.pipelining_ops.pipeline(computational_stages=computational_stages,
-                                                       gradient_accumulation_count=int(
-                                                           opts['pipeline_depth']),
+                                                       gradient_accumulation_count=int(opts['pipeline_depth']),
                                                        repeat_count=iterations_per_step,
                                                        inputs=[learning_rate],
                                                        infeed_queue=infeed,
                                                        outfeed_queue=outfeed,
                                                         device_mapping=device_mapping,
+                                                        optimizer_function=optimizer_function,
                                                        forward_propagation_stages_poplar_options=options,
                                                        backward_propagation_stages_poplar_options=options,
-                                                       offload_weight_update_variables=opts[
-                                                           'offload_weight_update_variables'],
+                                                       offload_weight_update_variables=opts['offload_weight_update_variables'],
                                                        pipeline_schedule=ipu.ops.pipelining_ops.PipelineSchedule[opts['pipeline_schedule']],
                                                        recomputation_mode=ipu.ops.pipelining_ops.RecomputationMode[opts['recomputation_mode']],
                                                        name="Pipeline")
     else:
         pipeline_ops = ipu.ops.pipelining_ops.pipeline(computational_stages=computational_stages,
-                                                       gradient_accumulation_count=int(
-                                                           opts['pipeline_depth']),
+                                                       gradient_accumulation_count=int(opts['pipeline_depth']),
                                                        repeat_count=iterations_per_step,
                                                        inputs=[learning_rate],
                                                        infeed_queue=infeed,
@@ -213,8 +211,7 @@ def basic_pipelined_training_step(infeed,
                                                        device_mapping=device_mapping,
                                                        forward_propagation_stages_poplar_options=options,
                                                        backward_propagation_stages_poplar_options=options,
-                                                       offload_weight_update_variables=opts[
-                                                           'offload_weight_update_variables'],
+                                                       offload_weight_update_variables=opts['offload_weight_update_variables'],
                                                        pipeline_schedule=opts['pipeline_schedule'],
                                                        recomputation_mode=opts['recomputation_mode'],
                                                        name="Pipeline")
