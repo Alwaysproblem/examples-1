@@ -212,8 +212,8 @@ def basic_pipelined_training_step(infeed,
                                                        forward_propagation_stages_poplar_options=options,
                                                        backward_propagation_stages_poplar_options=options,
                                                        offload_weight_update_variables=opts['offload_weight_update_variables'],
-                                                       pipeline_schedule=opts['pipeline_schedule'],
-                                                       recomputation_mode=opts['recomputation_mode'],
+                                                       pipeline_schedule=ipu.ops.pipelining_ops.PipelineSchedule[opts['pipeline_schedule']],
+                                                       recomputation_mode=ipu.ops.pipelining_ops.RecomputationMode[opts['recomputation_mode']],
                                                        name="Pipeline")
 
     return pipeline_ops
@@ -229,7 +229,8 @@ def training_step_with_infeeds_and_outfeeds(bert_config, train_iterator, outfeed
                                  iterations_per_step=iterations_per_step,
                                  bert_config=bert_config,
                                  opts=opts,
-                                 learning_rate=learning_rate)
+                                 learning_rate=learning_rate,
+                                 is_training=is_training)
 
         return ipu.ipu_compiler.compile(_training_step, [])
     else:
@@ -523,6 +524,138 @@ def train(bert_config, opts):
         train.session.close()
 
 
+##############################eval##################################
+def eval_step(evals, learning_rate):
+    start = time.time()
+    _ = evals.session.run(evals.ops, feed_dict={
+        evals.placeholders['learning_rate']: learning_rate,
+    })
+    batch_time = (time.time() - start)
+    if not os.environ.get('TF_POPLAR_FLAGS') or '--use_synthetic_data' not in os.environ.get('TF_POPLAR_FLAGS'):
+        _learning_rate, _mlm_loss, _nsp_loss, _mlm_acc, _nsp_acc = evals.session.run(evals.outfeed)
+        mlm_loss = np.mean(_mlm_loss)
+        nsp_loss = np.mean(_nsp_loss)
+        mlm_acc = np.mean(_mlm_acc)
+        nsp_acc = np.mean(_nsp_acc)
+    else:
+        mlm_loss, nsp_loss, mlm_acc, nsp_acc = 0, 0, 0, 0
+    return batch_time, mlm_loss, nsp_loss, mlm_acc, nsp_acc
+
+
+def evaluate(opts):
+    epochs = opts["epochs"]
+    total_samples = dataset.get_dataset_files_count(opts, is_training=True)
+    logger.info("[evaluation] Total samples with duplications {}".format(total_samples))
+    total_independent_samples = total_samples//opts['duplication_factor']
+    logger.info("[evaluation] Total samples without duplications {}".format(total_independent_samples))
+    steps_per_epoch = total_independent_samples // (opts['batches_per_step']*opts["total_batch_size"])
+    iterations_per_epoch = total_independent_samples // (opts["total_batch_size"])
+
+    # total iterations
+    if opts['steps']:
+        logger.warn("[evaluation] Ignoring the epoch flag and using the steps one")
+        steps = opts['steps']
+    else:
+        steps = epochs * steps_per_epoch
+    logger.info("[evaluation] Total training steps equal to {}, total number of samples being analyzed equal to {}".format(steps, steps*opts['batches_per_step']*opts['total_batch_size']))
+    iterations_per_step = opts['batches_per_step']
+    ckpt_per_step = opts['steps_per_ckpts']
+
+    logger.info(
+        "################################################################################")
+    logger.info("Start evaluation......")
+    print_format = (
+        "[evaluation] step: {step:6d}, iteration: {iteration:6d}, epoch: {epoch:6.3f}, lr: {lr:10.3g}, mlm_loss: {mlm_loss:6.3f}, nsp_loss: {nsp_loss:6.3f}, "
+        "samples/sec: {samples_per_sec:6.2f}, time: {iter_time:8.6f}, total_time: {total_time:8.1f}, mlm_acc: {mlm_acc:8.5f}, nsp_acc: {nsp_acc:8.5f}")
+
+    # avoid nan issue caused by queue length is zero.
+    queue_len = iterations_per_epoch // iterations_per_step
+    if queue_len == 0:
+        queue_len = 1
+    batch_times = deque(maxlen=queue_len)
+
+    # best_saver = train.saver["best_saver"]
+    iterations_per_step = opts['batches_per_step']
+    evals = build_graph(bert_config, opts, iterations_per_step, is_training=False, feed_name="trainfeed")
+    evals.session.run(evals.init)
+    evals.session.run(evals.iterator.initializer)
+    evals_saver = evals.saver["train_saver"]
+    evals_saver.restore(evals.session, "/localdata/yongxiy/Desktop/examples-ipu/applications/tensorflow/bert/checkpoint/phase1/BERT_pretraining_2021-03-15 08:49:29.404/" + f'ckpt_last-{100}')
+
+    step = 0
+    i = 0
+    start_all = time.time()
+
+    while step < steps:
+
+        try:
+            batch_time, mlm_loss, nsp_loss, mlm_acc, nsp_acc = eval_step(evals, 1.0)
+        except tf.errors.OpError as e:
+            raise tf.errors.ResourceExhaustedError(e.node_def, e.op, e.message)
+
+        epoch = float(opts["total_batch_size"] * i) / total_independent_samples
+
+        batch_time /= iterations_per_step
+
+        if step != 0:
+            batch_times.append([batch_time])
+
+        if step == 1:
+            poplar_compile_time = time.time() - start_all
+            logger.info(f"[evaluation] the poplar compile time {poplar_compile_time}")
+
+        # Print loss
+        if step % opts['steps_per_logs'] == 0:
+            if len(batch_times) != 0:
+                avg_batch_time = np.mean(batch_times)
+            else:
+                avg_batch_time = batch_time
+
+            samples_per_sec = opts['total_batch_size'] / avg_batch_time
+
+            # flush times every time it is reported
+            batch_times.clear()
+
+            total_time = time.time() - start_all
+
+            stats = OrderedDict([
+                ('step', step),
+                ('iteration', i),
+                ('epoch', epoch),
+                ('lr', 1.0),
+                ('mlm_loss', mlm_loss),
+                ('nsp_loss', nsp_loss),
+                ('mlm_acc', mlm_acc),
+                ('nsp_acc', nsp_acc),
+                ('iter_time', avg_batch_time),
+                ('samples_per_sec', samples_per_sec),
+                ('total_time', total_time),
+            ])
+
+            logger.info(print_format.format(**stats))
+            bert_logging.write_to_csv(
+                stats, i == 0, True, opts['logs_path'])
+
+            logger.info(f"[evaluation] throughput samples per second: {samples_per_sec}")
+            logger.info(f"[evaluation] average batch time: {avg_batch_time}")
+            # sys_summary = tf.Summary()
+            # sys_summary.value.add(tag='perf/throughput_samples_per_second', simple_value=samples_per_sec)
+            # sys_summary.value.add(tag='perf/average_batch_time', simple_value=avg_batch_time)
+            # summary_writer.add_summary(sys_summary, step)
+
+        i += iterations_per_step
+        step += 1
+
+
+    # batch_time, mlm_loss, nsp_loss, mlm_acc, nsp_acc = eval_step(evals, 1.0)
+
+    # print(batch_time, mlm_loss, nsp_loss, mlm_acc, nsp_acc)
+    
+    
+
+
+################################################################
+
 def add_main_arguments(parser):
     group = parser.add_argument_group('Main')
     group.add_argument('--help', action='store_true', default=False,
@@ -787,4 +920,5 @@ if __name__ == '__main__':
     set_defaults(opts)
     logger.info("Command line: " + ' '.join(sys.argv))
     logger.info("Option flags:\n" + json.dumps(opts, indent=1))
-    train(bert_config, opts)
+    # train(bert_config, opts)
+    evaluate(opts)
